@@ -1,0 +1,35 @@
+{
+  "name": "wxchat",
+  "version": "1.0.0",
+  "description": "A service for Weixin Chatbot in Javascript",
+  "main": "server/index.js",
+  "scripts": {
+    "test": "echo 'No Test'",
+    "dev.serve": "node ./server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stallpool/wxchat.git"
+  },
+  "keywords": [
+    "repository",
+    "source code",
+    "search engine",
+    "flame"
+  ],
+  "author": "Seven Lju",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stallpool/wxchat/issues"
+  },
+  "homepage": "https://github.com/stallpool/wxchat#readme",
+  "dependencies": {
+    "ldapjs": "^1.0.2",
+    "uuid": "^3.3.2",
+    "ws": "^6.2.1"
+  },
+  "devDependencies": {
+    "browserify": "^16.5.0",
+    "uglify-js": "^3.6.0"
+  }
+}
