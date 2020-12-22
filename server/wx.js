@@ -14,16 +14,15 @@ const helper = {
       res.writeHead(400, text || 'Bad Request');
       res.end();
    },
-   read_request_json: (req) => {
+   read_request_binary: (req) => {
       return new Promise((resolve, reject) => {
-         Web.read_request_binary(req).then((buf) => {
-            try {
-               body = JSON.parse(buf.toString());
-               resolve(body);
-            } catch(e) {
-               reject(e);
-            }
-         }, reject);
+         let body = [];
+         req.on('data', (chunk) => { body.push(chunk); });
+         req.on('end', () => {
+            body = Buffer.concat(body);
+            resolve(body);
+         });
+         req.on('error', reject);
       });
    },
 };
