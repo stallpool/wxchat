@@ -1,8 +1,26 @@
 const i_url = require('url');
 const crypto = require('crypto');
 
-const i_utils = require('./utils');
 const i_wxchatbot = require('./wx_chatbot');
+
+const helper = {
+   e400: (res, text) => {
+      res.writeHead(400, text || 'Bad Request');
+      res.end();
+   },
+   read_request_json: (req) => {
+      return new Promise((resolve, reject) => {
+         Web.read_request_binary(req).then((buf) => {
+            try {
+               body = JSON.parse(buf.toString());
+               resolve(body);
+            } catch(e) {
+               reject(e);
+            }
+         }, reject);
+      });
+   },
+};
 
 class WXBizMsgCodec {
    constructor() {}
@@ -208,9 +226,11 @@ async function chatbot (req, res) {
    let encrypt_type = param.encrypt_type;
    let msg_signature = param.msg_signature;
    if (!check_signature(signature, timestamp, nonce)) {
-      return i_utils.Web.e400(res);
+      return helper.e400(res);
    }
-   let q = await i_utils.Web.read_request_binary(req);
+   let q = null;
+   try { q = await helper.read_request_binary(req); } catch(err) { }
+   if (!q) return helper.e400(res);
    let xml = parse_xml(q.toString());
    let to_user_name = get_xml_by_path(xml, 'xml.ToUserName');
    let encrypt = get_xml_by_path(xml, 'xml.Encrypt');
@@ -218,7 +238,7 @@ async function chatbot (req, res) {
    let codec_signature = codec.sha1(timestamp, nonce, encrypt.value);
    if (codec_signature !== msg_signature || encrypt_type !== 'aes') {
       console.log('[security.warn]', encrypt_type, 'should:', msg_signature, 'but:', codec_signature);
-      return i_utils.Web.e400(res);
+      return helper.e400(res);
    }
    let contents = codec.decrypt(encrypt.value, process.env.WEIXIN_APPID);
    let contents_xml = parse_xml(contents);
