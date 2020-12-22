@@ -3,6 +3,12 @@ const crypto = require('crypto');
 
 const i_wxchatbot = require('./wx_chatbot');
 
+const meta = {
+   app_id: process.env.WEIXIN_APPID,
+   token: process.env.WEIXIN_TOKEN,
+   aes_key: process.env.WEIXIN_ENCODINGAESKEY,
+};
+
 const helper = {
    e400: (res, text) => {
       res.writeHead(400, text || 'Bad Request');
@@ -27,7 +33,7 @@ class WXBizMsgCodec {
 
    sha1(timestamp, nonce, text) {
       return crypto.createHash('sha1').update(
-         [process.env.WEIXIN_TOKEN, timestamp, nonce, text].sort((a,b) => a>b?1:-1).join(''), 'utf8'
+         [meta.token, timestamp, nonce, text].sort((a,b) => a>b?1:-1).join(''), 'utf8'
       ).digest('hex');
    }
 
@@ -58,7 +64,7 @@ class WXBizMsgCodec {
          textbuf, Buffer.from(appid)
       ]);
       textbuf = this.padding(textbuf);
-      let key = Buffer.from(process.env.WEIXIN_ENCODINGAESKEY + '=', 'base64');
+      let key = Buffer.from(meta.aes_key + '=', 'base64');
       let cipher = crypto.createCipheriv('aes-256-cbc', key, key.slice(0, 16));
       cipher.setAutoPadding(false);
       let encrypted = cipher.update(textbuf, 'utf8');
@@ -67,7 +73,7 @@ class WXBizMsgCodec {
    }
 
    decrypt(text, appid) {
-      let key = Buffer.from(process.env.WEIXIN_ENCODINGAESKEY + '=', 'base64');
+      let key = Buffer.from(meta.aes_key + '=', 'base64');
       let decipher = crypto.createDecipheriv('aes-256-cbc', key, key.slice(0, 16));
       let textbuf = Buffer.from(text, 'base64');
       let decrypted = decipher.update(textbuf);
@@ -188,7 +194,7 @@ function check_signature(signature, timestamp, nonce) {
       return false;
    }
    let checked = crypto.createHash('sha1').update(
-      [process.env.WEIXIN_TOKEN, timestamp, nonce].sort((a,b) => a>b?1:-1).join(''), 'utf8'
+      [meta.token, timestamp, nonce].sort((a,b) => a>b?1:-1).join(''), 'utf8'
    ).digest('hex');
    if (checked === signature) {
       return true;
@@ -240,14 +246,14 @@ async function chatbot (req, res) {
       console.log('[security.warn]', encrypt_type, 'should:', msg_signature, 'but:', codec_signature);
       return helper.e400(res);
    }
-   let contents = codec.decrypt(encrypt.value, process.env.WEIXIN_APPID);
+   let contents = codec.decrypt(encrypt.value, meta.app_id);
    let contents_xml = parse_xml(contents);
    let rpl_timestamp = '' + ~~(new Date().getTime()/1000);
    let rpl_contents = 'success';
    if (contents_xml) {
       rpl_contents = await chatbot_chat(contents_xml, timestamp);
    }
-   let rpl_encrypted = codec.encrypt(rpl_contents, process.env.WEIXIN_APPID);
+   let rpl_encrypted = codec.encrypt(rpl_contents, meta.app_id);
    let rpl_encrypted_signature = codec.sha1(rpl_timestamp, nonce, rpl_encrypted);
    let rpl_xml = chatbot_rpl_template.replace(
       '{0}', rpl_encrypted
